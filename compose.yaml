@@ -1,0 +1,18 @@
+services:
+  studio:
+    build: .
+    init: true
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_PASSWORD: ${APP_PASSWORD:?Set APP_PASSWORD in .env before deployment}
+      DATA_DIR: /app/data
+      JOB_CONCURRENCY: "1"
+      RETENTION_HOURS: "24"
+    volumes:
+      - exports:/app/data
+    shm_size: 1gb
+    stop_grace_period: 60s
+volumes:
+  exports:

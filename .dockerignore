@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+!.env.example
+.runtime
+.venv
+__pycache__
+data
+exports
+*.xlsx
+*.zip
+*.log

@@ -1,0 +1,10 @@
+__pycache__/
+.runtime/
+exports/
+*.tmp.xlsx
+.cancel-*
+data/
+.env
+.env.*
+!.env.example
+.venv/

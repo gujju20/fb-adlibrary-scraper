@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ad-library-studio
+    runtime: docker
+    plan: standard
+    healthCheckPath: /health
+    numInstances: 1
+    envVars:
+      - key: APP_PASSWORD
+        sync: false
+      - key: DATA_DIR
+        value: /app/data
+      - key: JOB_CONCURRENCY
+        value: '1'
+      - key: RETENTION_HOURS
+        value: '24'
+    disk:
+      name: exports
+      mountPath: /app/data
+      sizeGB: 10

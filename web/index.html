@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ad Library Studio — Export ads & media</title>
+<meta name="description" content="Export Facebook Ad Library results to Excel and download available creative assets in one ZIP.">
+<link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script>
+</head>
+<body>
+<header><a class="brand" href="/" aria-label="Ad Library Studio home"><span class="mark">a.</span> Ad Library <strong>Studio</strong></a><span class="badge"><span class="dot"></span> HEADLESS WORKSPACE</span></header>
+<main>
+<section class="intro"><p class="eyebrow">RESEARCH. EXPORT. COLLECT.</p><h1>Your next ad library.<br><span>Ready to download.</span></h1><p>Turn a Facebook Ad Library search into an organized Excel workbook.<br> Collect every available image and video in a single ZIP.</p></section>
+<div class="layout">
+<section class="panel source-panel"><div class="section-head"><span class="step">01</span><h2>Set up your export</h2></div>
+<form id="export-form">
+<label for="url">Facebook Ad Library link</label><textarea id="url" rows="4" placeholder="https://www.facebook.com/ads/library/?active_status=active&country=ALL&..." required maxlength="8192" spellcheck="false"></textarea>
+<div class="scope"><span class="globe">◎</span><div><strong id="country-label">Country follows your link</strong><small id="scope-description">Use country=ALL for worldwide search results.</small></div></div>
+<label for="limit">Maximum ads <span class="optional">optional</span></label><div class="limit-row"><input type="number" id="limit" min="0" max="100000" step="1" value="0"><span>0 = all matching results</span></div>
+<button id="start" class="primary" type="submit">Start export <span>↗</span></button><p class="helper">Active ads · Creative versions · Available location data</p>
+</form><div id="error" class="notice error" role="alert" hidden></div>
+<div class="how"><strong>One search, two downloads.</strong><p>First export your workbook. Then choose <b>Download all assets</b> to prepare the media ZIP.</p><p>Worldwide searches stay worldwide throughout the export and download.</p></div>
+</section>
+<section class="workspace">
+<div class="panel progress-panel"><div class="section-head"><span class="step">02</span><h2>Export workspace</h2><span id="status-pill" class="pill">READY</span></div>
+<div id="empty"><div class="empty-symbol">↧</div><h3>A clean handoff for your research.</h3><p>Your progress, files and download activity will appear here.</p></div>
+<div id="job-content" hidden>
+<div class="run-heading"><div><p id="job-country" class="eyebrow"></p><h3 id="job-title">Waiting to start</h3></div><button id="stop" class="subtle" type="button">Stop & save</button></div>
+<p id="scrape-warning" class="notice warning" hidden></p>
+<p id="job-message" class="muted" role="status" aria-live="polite"></p>
+<div class="progress-meta"><span id="phase-label">Starting</span><strong id="percent">—</strong></div>
+<progress id="progress" max="100" aria-label="Current phase progress"></progress>
+<div class="stats"><div><span>ADS EXPORTED</span><strong id="ad-count">—</strong></div><div><span>ELAPSED</span><strong id="elapsed">0s</strong></div><div><span id="eta-label">PHASE ESTIMATE</span><strong id="eta">Calculating…</strong></div></div>
+<div class="downloads"><a id="xlsx" class="download disabled" aria-disabled="true"><span class="file-icon">X</span><span><strong>Excel workbook</strong><small id="xlsx-note">Available after scraping</small></span><span class="arrow">↓</span></a><button id="assets" class="download" type="button" disabled><span class="file-icon zip">Z</span><span><strong id="asset-title">Download all assets</strong><small id="asset-note">Images & videos in one ZIP</small></span><span class="arrow">↓</span></button></div>
+<a id="zip-link" class="zip-link" hidden>Download prepared ZIP again ↓</a>
+<p id="expiry" class="helper"></p>
+<p class="helper">Missing or expired media URLs are listed in download_report.csv inside the ZIP.</p>
+</div></div>
+<div class="panel log-panel"><div class="section-head"><span class="step">03</span><h2>Live activity</h2><a id="save-log" class="text-link" hidden>Save log ↓</a></div><div id="logs" class="logs" role="log" aria-live="off"><p class="log-placeholder">Waiting for your first export…</p></div></div>
+</section>
+</div>
+<section class="history-section"><div class="section-head"><h2>Recent exports</h2><span class="muted">This browser session</span></div><div id="history" class="history"><p class="muted">No exports yet.</p></div></section>
+<footer><span>AD LIBRARY STUDIO</span><p>Time estimates adapt to measured progress. Discovery has no fixed total.<br>Exports include results made available by Meta; availability can vary.</p></footer>
+</main>
+</body></html>

@@ -134,6 +134,9 @@ def download_file(request):
     if kind == 'logs':
         return PlainTextResponse('\n'.join(item['text'] for item in job['logs']),
                                  headers={'Content-Disposition': 'attachment; filename="activity.txt"'})
+    if kind == 'diagnostics' and job['diagnostics_ready']:
+        return FileResponse(manager(request).directory(job['id']) / 'diagnostics.zip',
+                            media_type='application/zip', filename='meta-page-diagnostics.zip')
     if kind not in ('xlsx', 'zip') or not job[kind + '_ready']:
         return JSONResponse({'error': 'File is not ready'}, 409)
     name = 'ads.xlsx' if kind == 'xlsx' else 'assets.zip'

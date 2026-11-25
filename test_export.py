@@ -11,6 +11,33 @@ from progress import estimate
 
 
 class ExportTests(unittest.TestCase):
+    def test_initial_page_restrictions(self):
+        self.assertIn('login', exporter.initial_page_problem('https://www.facebook.com/login/', ''))
+        self.assertIn('security check', exporter.initial_page_problem('https://www.facebook.com/checkpoint/', ''))
+        self.assertIn('restricted', exporter.initial_page_problem(exporter.LIBRARY_URL, "You're temporarily blocked"))
+        self.assertEqual(exporter.initial_page_problem(exporter.LIBRARY_URL, 'Log in  Ad Library'), '')
+
+    def test_initial_page_retries_and_records_diagnostics(self):
+        from unittest.mock import MagicMock
+        page = MagicMock()
+        page.goto.return_value.status = 200
+        page.locator.return_value.inner_text.return_value = 'Unexpected landing page'
+        with patch.object(exporter, 'check_cancel'), patch.object(exporter, 'save_page_diagnostics') as diagnostic:
+            with self.assertRaisesRegex(exporter.Error, 'did not render'):
+                exporter.open_library(page, exporter.LIBRARY_URL, Path('ads.xlsx'), wait_seconds=0)
+            self.assertEqual(page.goto.call_count, 2)
+            diagnostic.assert_called_once()
+
+    def test_initial_navigation_can_recover_after_http_403(self):
+        from unittest.mock import MagicMock
+        page = MagicMock()
+        page.goto.return_value.status = 403
+        with patch.object(exporter, 'check_cancel'), patch.object(exporter, 'visible_ids',
+                side_effect=[exporter.Error('Execution context was destroyed'), {'123'}]),                 patch.object(exporter, 'save_page_diagnostics') as diagnostic:
+            exporter.open_library(page, exporter.LIBRARY_URL, Path('ads.xlsx'))
+            page.wait_for_timeout.assert_called_with(500)
+            diagnostic.assert_not_called()
+
     def test_url_validation(self):
         self.assertEqual(exporter.source_settings(exporter.LIBRARY_URL)[1], 'DE')
         self.assertEqual(exporter.source_settings('https://www.facebook.com/ads/library/?country=ALL')[2], 'All countries')

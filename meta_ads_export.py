@@ -3,6 +3,7 @@ import json
 import re
 import shutil
 import time
+from zipfile import ZipFile
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
@@ -683,6 +684,94 @@ def save_workbook(path, ads, versions, locations, run, archive):
     temporary.replace(path)
 
 
+
+def initial_page_problem(url, text):
+    path = urlsplit(url).path.lower()
+    body = text.casefold()
+    if any(part in path for part in ('/checkpoint', '/challenge', '/captcha')):
+        return 'Meta requires a security check on this server. Headless scraping cannot continue.'
+    if path.startswith('/login') or 'you must log in to continue' in body:
+        return 'Meta requires login on this server. The public Ad Library page was not available.'
+    if any(phrase in body for phrase in ("you're temporarily blocked", 'you?re temporarily blocked',
+                                         'too many requests', 'temporarily restricted', 'access denied')):
+        return 'Meta restricted this request. Retry later; increasing the ad limit will not resolve this.'
+    return ''
+
+
+def save_page_diagnostics(page, output, reason):
+    """Capture only the public page view; never cookies or browser storage."""
+    try:
+        info = {'reason': str(reason), 'url': page.url, 'title': page.title(),
+                'visible_text': page.locator('body').inner_text(timeout=3000)[:8000]}
+        with ZipFile(output.parent / 'diagnostics.zip', 'w') as bundle:
+            bundle.writestr('page.json', json.dumps(info, indent=2, ensure_ascii=False))
+            try:
+                bundle.writestr('page.png', page.screenshot(timeout=5000))
+            except Error as exc:
+                bundle.writestr('screenshot-error.txt', str(exc).splitlines()[0])
+        print('Page diagnostics saved. Download the diagnostic ZIP to inspect what Meta returned.', flush=True)
+    except Exception as exc:
+        print(f'Could not capture page diagnostics: {str(exc).splitlines()[0]}', flush=True)
+
+
+def open_library(page, url, output, wait_seconds=60, attempts=2):
+    try:
+        for attempt in range(1, attempts + 1):
+            check_cancel()
+            event('starting', message=f'Opening Meta Ad Library (attempt {attempt}/{attempts})')
+            try:
+                response = page.goto(url, wait_until='domcontentloaded', timeout=60000)
+                if response and response.status >= 400:
+                    print(f'Meta returned HTTP {response.status}; checking whether the page can still render results.', flush=True)
+            except TimeoutError:
+                print('Navigation is slow; checking whether the search page has rendered.', flush=True)
+            deadline = time.monotonic() + wait_seconds
+            next_log = 0
+            while time.monotonic() < deadline:
+                try:
+                    check_cancel()
+                    if visible_ids(page):
+                        return
+                    empty = page.get_by_text(re.compile(r'^(No ads found|No results found|0 results)([ .]|$)', re.I))
+                    if empty.count() and empty.first.is_visible():
+                        return
+                    try:
+                        text = page.locator('body').inner_text(timeout=1500)
+                    except TimeoutError:
+                        text = ''
+                    problem = initial_page_problem(page.url, text)
+                    if problem:
+                        raise Error(problem)
+                    # Prefer declining optional cookies; do not accept tracking on the user's behalf.
+                    for label in ('Decline optional cookies', 'Only allow essential cookies', 'Reject optional cookies'):
+                        button = page.get_by_role('button', name=label, exact=True)
+                        if button.count() and button.first.is_visible():
+                            try:
+                                button.first.click(timeout=2000)
+                                print('Dismissed optional-cookie prompt.', flush=True)
+                            except TimeoutError:
+                                pass
+                            break
+                    if time.monotonic() >= next_log:
+                        print(f'Waiting for initial ad cards (attempt {attempt}/{attempts}); page: {page.title()}', flush=True)
+                        next_log = time.monotonic() + 10
+                    page.wait_for_timeout(1000)
+                except Error as exc:
+                    if 'Execution context was destroyed' not in str(exc) and 'Cannot find context' not in str(exc):
+                        raise
+                    # Facebook can navigate again while its initial application loads.
+                    page.wait_for_timeout(500)
+            print('No ad cards yet; retrying the search page.' if attempt < attempts else
+                  'No ad cards appeared after the initial loading retries.', flush=True)
+        text = page.locator('body').inner_text(timeout=3000)
+        excerpt = ' '.join(text.split())[:500]
+        raise Error('Meta did not render readable ad cards or a confirmed empty result. '
+                    'This may be a consent/login page, server access restriction, or changed layout. '
+                    f'Page text: {excerpt or "(empty page)"}. Download diagnostics for the actual page.')
+    except Exception as exc:
+        save_page_diagnostics(page, output, exc)
+        raise
+
 def main():
     global EVENTS, CANCEL_FILE
     parser = argparse.ArgumentParser(description="Export Meta Ad Library to Excel.")
@@ -744,12 +833,7 @@ def main():
                 locale="en-GB", viewport={"width": 1440, "height": 1000}
             )
             page.set_default_timeout(timeout)
-            page.goto(url, wait_until="domcontentloaded", timeout=timeout * 3)
-
-            empty = page.get_by_text(
-                re.compile(r"^(No (ads|results)|0 results)", re.I)
-            )
-            page.get_by_text(AD_ID).or_(empty).first.wait_for(timeout=timeout * 2)
+            open_library(page, url, args.output)
 
             headings = page.get_by_role("heading", name=re.compile("results", re.I))
             run["meta_displayed_count"] = (

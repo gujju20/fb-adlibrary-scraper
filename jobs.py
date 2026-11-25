@@ -104,6 +104,7 @@ class JobManager:
         job.pop('owner')
         folder = self.directory(key)
         job['xlsx_ready'] = job['scrape']['status'] not in BUSY and (folder / 'ads.xlsx').exists()
+        job['diagnostics_ready'] = job['scrape']['status'] not in BUSY and (folder / 'diagnostics.zip').exists()
         job['zip_ready'] = job['assets']['status'] not in BUSY and (folder / 'assets.zip').exists()
         job['server_time'] = time.time()
         job['expires_at'] = job['updated'] + self.retention
@@ -268,6 +269,8 @@ class JobManager:
                 output = folder / ('ads.xlsx' if kind == 'scrape' else 'assets.zip')
                 good = code == 0 and state.get('success') is True and output.exists()
                 status = 'complete' if good else ('partial' if output.exists() else 'failed')
+                if kind == 'scrape' and not good and not state.get('ads', 0):
+                    status = 'failed'
                 if flag.exists():
                     status = 'cancelled'
                 message = state.get('message', '')

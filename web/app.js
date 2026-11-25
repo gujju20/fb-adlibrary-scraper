@@ -53,6 +53,7 @@ function render(job) {
   $('asset-title').textContent=job.zip_ready?'Download assets ZIP':busy(job.assets)?'Preparing your ZIP…':'Download all assets';
   $('asset-note').textContent=job.assets.total!=null ? `${job.assets.downloaded||0} saved · ${job.assets.failed||0} failed · ${job.assets.missing||0} missing` : 'Images & videos in one ZIP';
   $('zip-link').hidden=!job.zip_ready; $('zip-link').href=base+'zip';
+  $('diagnostics').hidden=!job.diagnostics_ready; $('diagnostics').href=base+'diagnostics';
   $('save-log').hidden=false; $('save-log').href=base+'logs';
   const signature=job.id+JSON.stringify(job.logs);
   if (signature!==logSignature) {
